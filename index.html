@@ -27,18 +27,18 @@ h2{margin:0 0 13px;font-size:clamp(23px,4.5vw,32px)}.center{text-align:center}.p
 <button class="primary hidden" id="next">🌟 Nächste Schatzaufgabe</button><button class="secondary" id="home">🏠 Zurück zur Auswahl</button>
 </section>
 <section id="finish" class="panel hidden center"><div style="font-size:83px">🏆🎉🎁</div><h2>Schatz gefunden!</h2><p id="finalMessage"></p><h2 id="finalScore"></h2><button class="primary" id="again">🔁 Neues Abenteuer</button><button class="secondary" id="choose">🏠 Andere Spielfigur</button></section>
-<div class="footer">Mathe-Abenteuer 3.1 · Lehrplanorientierung NRW Mathematik Primarstufe (2021) · Keine Schulnote</div>
+<div class="footer">Mathe-Abenteuer 3.2 · Lehrplanorientierung NRW Mathematik Primarstufe (2021) · Keine Schulnote</div>
 </main>
 <script>
 (function(){'use strict';
 const kids=[{id:'lenia',name:'Lenia',age:6,emoji:'🦊',world:'Zauberwald',grade:1},{id:'mila',name:'Mila',age:8,emoji:'🦉',world:'Sterneninsel',grade:3},{id:'jannes',name:'Jannes',age:8,emoji:'🐉',world:'Drachenburg',grade:3}];
-const catalog=[['mix','🎲 Gemischte Abenteuer'],['friends','❤️ Verliebte Zahlen'],['add','➕ Plus und Minus'],['pattern','🔢 Zahlenfolgen'],['story','🍎 Rechengeschichten'],['shape','🔷 Formen und Raum'],['time','🕒 Uhr und Zeit'],['money','🪙 Geld und Größen'],['times','✖️ Einmaleins'],['divide','➗ Teilen'],['wall','🧱 Zahlenmauern'],['data','📊 Daten und Zufall']];
+const catalog=[['mix','🎲 Gemischte Abenteuer'],['friends','❤️ Verliebte Zahlen'],['add','➕ Plus und Minus'],['pattern','🔢 Zahlenfolgen'],['story','🍎 Rechengeschichten'],['shape','🔷 Formen und Raum'],['time','🕒 Uhr und Zeit'],['money','🪙 Geld und Größen'],['times','✖️ Einmaleins'],['divide','➗ Teilen'],['wall','🧱 Zahlenmauern'],['data','📊 Daten und Zufall'],['riddle','🕵️ Zahlen-Detektive']];
 const $=id=>document.getElementById(id);let who='lenia',mode='solo',topic='mix',round=0,stars=0,task=null,answered=false,wrong=0;
 const pick=a=>a[Math.floor(Math.random()*a.length)],rand=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 function person(){return kids.find(k=>k.id===(mode==='family'?kids[round%3].id:who))}
 function visible(id){['welcome','game','finish'].forEach(x=>$(x).classList.toggle('hidden',x!==id));window.scrollTo(0,0)}
 function profiles(){$('profiles').innerHTML='';kids.forEach(k=>{let b=document.createElement('button');b.className='profile'+(who===k.id?' selected':'');b.innerHTML='<span class="avatar">'+k.emoji+'</span>'+k.name+'<small>'+k.age+' Jahre · Klasse '+k.grade+'</small>';b.onclick=()=>{who=k.id;profiles();topics()};$('profiles').appendChild(b)})}
-function available(k){return catalog.filter(t=>k.grade===1?!['times','divide'].includes(t[0]):true)}
+function available(k){return catalog.filter(t=>k.grade===1?!['times','divide','riddle'].includes(t[0]):true)}
 function topics(){let allowed=mode==='family'?catalog:available(kids.find(k=>k.id===who));if(!allowed.some(x=>x[0]===topic))topic='mix';$('topics').innerHTML='';allowed.forEach(t=>{let b=document.createElement('button');b.className='topic'+(topic===t[0]?' on':'');b.textContent=t[1];b.onclick=()=>{topic=t[0];topics()};$('topics').appendChild(b)});let r=[];try{kids.forEach(k=>{let n=localStorage.getItem('mathe3_'+k.id);if(n)r.push(k.emoji+' '+k.name+': '+n+' Sterne')})}catch(e){}$('records').textContent=r.length?'🏅 Bisherige Bestleistungen: '+r.join(' · '):'🏅 Noch keine Bestleistungen – der erste Schatz wartet!'}
 function make(q,a,category,art='',hint='',explain=''){return {q,a,category,art,hint,explain}}
 // Alle Aufgaben werden innerhalb einer Runde auf doppelte Aufgaben geprüft.
@@ -47,6 +47,19 @@ function make(q,a,category,art='',hint='',explain='',variant='basis'){return {q,
 function rotate(t,variants){let key=person().id+':'+t;if(!usedTypes[key])usedTypes[key]=[];let previous=usedTypes[key];let available=variants.filter(v=>!previous.includes(v));if(!available.length){usedTypes[key]=[];available=variants.slice()}let v=pick(available);usedTypes[key].push(v);return v}
 function gen(k,t){
 const small=k.grade===1;let a,b,c,n,v;
+if(t==='riddle'){
+// Nur Klasse 3: In der angegebenen Spanne gibt es exakt eine Zahl mit dem gesuchten Rest.
+let divisor=rand(5,9),remainder=rand(1,divisor-1),quotient=rand(3,9);
+let solution=divisor*quotient+remainder;
+let lo=solution-rand(2,divisor-1),hi=solution+rand(2,divisor-1);
+let distractors=[];
+for(let number=lo;number<=hi;number++)if(number!==solution&&number%divisor!==remainder)distractors.push(number);
+let choices=[solution];
+while(choices.length<4){let candidate=pick(distractors.filter(n=>!choices.includes(n)));choices.push(candidate)}
+return {...make('Finde die Zahl zwischen '+lo+' und '+hi+', die beim Teilen durch '+divisor+' den Rest '+remainder+' hat.',solution,t,'🕵️ 🔢 🔎',
+'Probiere die Vielfachen von '+divisor+' aus und zähle dann '+remainder+' dazu.',
+solution+' = '+quotient+' × '+divisor+' + '+remainder+'. Der Rest beträgt '+remainder+'.','rest'+divisor+'_'+remainder),choices:choices.sort(()=>Math.random()-.5)};
+}
 if(t==='friends'){
  v=rotate(t,small?['ten','five','tenMissing','tenReverse']:['hundred','hundreds','tenToNext','missing']);
  if(v==='five'){n=5;a=rand(1,4)}else if(v==='tenToNext'){n=10*rand(2,9);a=n-rand(1,9)}else if(v==='hundreds'){n=100*rand(2,9);a=100*rand(1,n/100-1)}else{n=small?10:100;a=rand(1,n-1)}
@@ -122,13 +135,13 @@ if(v==='less'){a=Math.max(a,b+1);return make('📊 '+a+' Stimmen für 🍎. 🍐
 return make('📊 '+a+' Stimmen für 🍎 und '+b+' für 🍐. Insgesamt?',a+b,t,'📊 🍎 🍐','Zähle beide Gruppen zusammen.',a+' plus '+b+' ist '+(a+b)+'.',v)}
 return gen(k,'add')
 }
-function makeTask(){let k=person(),t=roundPlan[round];if(k.grade===1&&['times','divide'].includes(t))t='add';let result;
+function makeTask(){let k=person(),t=roundPlan[round];if(k.grade===1&&['times','divide','riddle'].includes(t))t='pattern';let result;
 for(let tries=0;tries<80;tries++){result=gen(k,t);if(result.a===null){ // gemischte Punkt-vor-Strich-Aufgabe
 const m=result.q.match(/(\d+) × (\d+) \+ (\d+) =/);if(m){result.a=Number(m[1])*Number(m[2])+Number(m[3]);result.explain='Erst mal rechnen, dann addieren: '+result.a+'.'}}
 let key=k.id+'|'+t+'|'+result.q;
 if(!usedQuestions.has(key)){usedQuestions.add(key);break}
 }
-let answers=[result.a];let tries=0;while(answers.length<4&&tries++<200){let delta=rand(1,k.grade===1?6:Math.max(18,Math.ceil(result.a*.3)));let x=result.a+(rand(0,1)?delta:-delta);if(x>=0&&!answers.includes(x))answers.push(x)}
+let answers=result.choices?result.choices.slice():[result.a];let tries=0;while(answers.length<4&&tries++<200){let delta=rand(1,k.grade===1?6:Math.max(18,Math.ceil(result.a*.3)));let x=result.a+(rand(0,1)?delta:-delta);if(x>=0&&!answers.includes(x))answers.push(x)}
 for(let i=answers.length-1;i>0;i--){let j=rand(0,i);[answers[i],answers[j]]=[answers[j],answers[i]]}result.choices=answers;return result}
 function makePlan(){let total=mode==='family'?9:8;usedQuestions=new Set();usedTypes={};let k=kids.find(x=>x.id===who),allowed=available(k).map(x=>x[0]).filter(x=>x!=='mix');roundPlan=[];
 if(topic!=='mix'){for(let i=0;i<total;i++)roundPlan.push(topic);return}
