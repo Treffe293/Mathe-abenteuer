@@ -27,7 +27,7 @@ h2{margin:0 0 13px;font-size:clamp(23px,4.5vw,32px)}.center{text-align:center}.p
 <button class="primary hidden" id="next">🌟 Nächste Schatzaufgabe</button><button class="secondary" id="home">🏠 Zurück zur Auswahl</button>
 </section>
 <section id="finish" class="panel hidden center"><div style="font-size:83px">🏆🎉🎁</div><h2>Schatz gefunden!</h2><p id="finalMessage"></p><h2 id="finalScore"></h2><button class="primary" id="again">🔁 Neues Abenteuer</button><button class="secondary" id="choose">🏠 Andere Spielfigur</button></section>
-<div class="footer">Mathe-Abenteuer 3.0 · Lehrplanorientierung NRW Mathematik Primarstufe (2021) · Keine Schulnote</div>
+<div class="footer">Mathe-Abenteuer 3.1 · Lehrplanorientierung NRW Mathematik Primarstufe (2021) · Keine Schulnote</div>
 </main>
 <script>
 (function(){'use strict';
@@ -41,26 +41,102 @@ function profiles(){$('profiles').innerHTML='';kids.forEach(k=>{let b=document.c
 function available(k){return catalog.filter(t=>k.grade===1?!['times','divide'].includes(t[0]):true)}
 function topics(){let allowed=mode==='family'?catalog:available(kids.find(k=>k.id===who));if(!allowed.some(x=>x[0]===topic))topic='mix';$('topics').innerHTML='';allowed.forEach(t=>{let b=document.createElement('button');b.className='topic'+(topic===t[0]?' on':'');b.textContent=t[1];b.onclick=()=>{topic=t[0];topics()};$('topics').appendChild(b)});let r=[];try{kids.forEach(k=>{let n=localStorage.getItem('mathe3_'+k.id);if(n)r.push(k.emoji+' '+k.name+': '+n+' Sterne')})}catch(e){}$('records').textContent=r.length?'🏅 Bisherige Bestleistungen: '+r.join(' · '):'🏅 Noch keine Bestleistungen – der erste Schatz wartet!'}
 function make(q,a,category,art='',hint='',explain=''){return {q,a,category,art,hint,explain}}
+// Alle Aufgaben werden innerhalb einer Runde auf doppelte Aufgaben geprüft.
+let usedQuestions=new Set(),usedTypes={},roundPlan=[];
+function make(q,a,category,art='',hint='',explain='',variant='basis'){return {q,a,category,art,hint,explain,variant}}
+function rotate(t,variants){let key=person().id+':'+t;if(!usedTypes[key])usedTypes[key]=[];let previous=usedTypes[key];let available=variants.filter(v=>!previous.includes(v));if(!available.length){usedTypes[key]=[];available=variants.slice()}let v=pick(available);usedTypes[key].push(v);return v}
 function gen(k,t){
-let small=k.grade===1,a,b,c,n;
-if(t==='friends'){n=small?10:100;a=rand(1,n-1);b=n-a;return make(a+' + ? = '+n,b,t,'❤️ '+'💛'.repeat(Math.min(a,10)),'Suche den Partner, mit dem zusammen '+n+' entsteht.',a+' und '+b+' ergeben zusammen '+n+'.')}
-if(t==='add'){if(small){a=rand(2,16);b=rand(1,Math.min(20-a,9));if(rand(0,1))return make(a+' + '+b+' = ?',a+b,t,'🍓'.repeat(a),'Zähle erst die erste Menge und dann weiter.',a+' plus '+b+' ergibt '+(a+b)+'.');return make((a+b)+' − '+b+' = ?',a,t,'⭐'.repeat(a+b),'Beim Minusrechnen nimmst du etwas weg.',(a+b)+' minus '+b+' ergibt '+a+'.')}
-a=rand(110,720);b=rand(30,Math.min(990-a,260));return rand(0,1)?make(a+' + '+b+' = ?',a+b,t,'💎 💎 💎','Rechne Hunderter, Zehner und Einer getrennt.',a+' plus '+b+' ergibt '+(a+b)+'.'):make((a+b)+' − '+b+' = ?',a,t,'💎 💎 💎','Zerlege die zweite Zahl in Hunderter, Zehner und Einer.',(a+b)+' minus '+b+' ergibt '+a+'.')}
-if(t==='pattern'){let step=pick(small?[1,2,5,10]:[10,25,50,100]);a=rand(1,small?8:15)*step;let max=small?100:1000;if(a+3*step>max)a=step;return make(a+', '+(a+step)+', '+(a+2*step)+', ?',a+3*step,t,'🔢 🔢 🔢','Wie groß ist der Sprung zwischen zwei Nachbarzahlen?','Es geht immer in '+step+'er-Schritten weiter.')}
-if(t==='story'){a=rand(2,small?9:18);b=rand(2,small?9:16);if(small&&a+b>20)b=20-a;return make('🍎 '+a+' Äpfel und '+b+' kommen dazu. Wie viele?',a+b,t,'🍎'.repeat(a)+'  ➕  '+'🍎'.repeat(b),'Stelle dir zwei Körbe vor und zähle alles zusammen.',a+' plus '+b+' ergibt '+(a+b)+' Äpfel.')}
-if(t==='shape'){let types=[['🔺','Wie viele Ecken hat ein Dreieck?',3],['⬜','Wie viele Ecken hat ein Quadrat?',4],['🔷','Wie viele Ecken hat eine Raute?',4],['⚪','Wie viele Ecken hat ein Kreis?',0]];let x=pick(types);return make(x[1],x[2],t,x[0]+' '+x[0],'Schau dir den Rand der Form genau an.','Die Form hat '+x[2]+' Ecken.')}
-if(t==='time'){a=rand(1,11);b=pick(small?[1,2]:[1,2,3,4]);let c=a+b;return make('🕒 Es ist '+a+':00 Uhr. '+b+' Stunden später ist es ...',c,t,'🕒 ⏳','Zähle die Stunden auf der Uhr weiter.','Nach '+b+' Stunden ist es '+c+':00 Uhr.')}
-if(t==='money'){a=rand(1,small?8:15);b=rand(1,small?7:12);return make('🪙 '+a+' € + '+b+' € = ?',a+b,t,'🪙 💰','Zähle beide Geldbeträge zusammen.',a+' Euro plus '+b+' Euro sind '+(a+b)+' Euro.')}
-if(t==='times'){a=rand(2,10);b=rand(2,10);return make(a+' × '+b+' = ?',a*b,t,'🎲 '.repeat(Math.min(a,7)),'Stell dir '+a+' Gruppen mit jeweils '+b+' Dingen vor.',a+' mal '+b+' ergibt '+(a*b)+'.')}
-if(t==='divide'){b=rand(2,9);c=rand(2,10);a=b*c;return make(a+' ÷ '+b+' = ?',c,t,'🍬 '.repeat(Math.min(a,15)),'Verteile '+a+' Dinge gleichmäßig auf '+b+' Gruppen.',a+' geteilt durch '+b+' ergibt '+c+'.')}
-if(t==='wall'){a=rand(2,small?8:38);b=rand(2,small?9:42);return make('🧱 Unten stehen '+a+' und '+b+'. Welcher Stein liegt darüber?',a+b,t,'　🧱❓<br> 🧱'+a+' 🧱'+b,'In der Zahlenmauer sind zwei Nachbarsteine zusammen der Stein darüber.',a+' plus '+b+' ergibt '+(a+b)+'.')}
-if(t==='data'){a=rand(2,small?8:15);b=rand(1,small?8:13);return make('📊 '+a+' Kinder mögen Äpfel, '+b+' mögen Birnen. Wie viele wurden befragt?',a+b,t,'🍎 📊 🍐','Addiere die beiden Gruppen.',a+' plus '+b+' ergibt '+(a+b)+' Kinder.')}
+const small=k.grade===1;let a,b,c,n,v;
+if(t==='friends'){
+ v=rotate(t,small?['ten','five','tenMissing','tenReverse']:['hundred','hundreds','tenToNext','missing']);
+ if(v==='five'){n=5;a=rand(1,4)}else if(v==='tenToNext'){n=10*rand(2,9);a=n-rand(1,9)}else if(v==='hundreds'){n=100*rand(2,9);a=100*rand(1,n/100-1)}else{n=small?10:100;a=rand(1,n-1)}
+ b=n-a;return make(v==='tenReverse'?(n+' − '+a+' = ?'):(v==='missing'?(a+' + ? = '+n):(a+' + ? = '+n)),b,t,'❤️ 💛 ❤️','Suche die Ergänzung bis '+n+'.',a+' und '+b+' ergeben '+n+'.',v);
+}
+if(t==='add'){
+ v=rotate(t,['plus','minus','missing','nearTen','three']);
+ if(small){a=rand(2,12);b=rand(1,Math.min(20-a,8));if(v==='minus')return make((a+b)+' − '+b+' = ?',a,t,'🍓 ⭐','Zähle rückwärts.',(a+b)+' minus '+b+' ergibt '+a+'.',v);
+ if(v==='missing')return make(a+' + ? = '+(a+b),b,t,'🧮 🍓','Wie viel fehlt?',a+' und '+b+' ergeben '+(a+b)+'.',v);
+ if(v==='nearTen'){a=rand(6,9);b=10-a;return make(a+' + '+b+' = ?',10,t,'🔟 ❤️','Ergänze zur Zehn.','Zusammen sind es 10.',v)}
+ if(v==='three'){a=rand(1,5);b=rand(1,5);c=rand(1,Math.min(5,20-a-b));return make(a+' + '+b+' + '+c+' = ?',a+b+c,t,'🍓 🍓 🍓','Rechne nacheinander.',a+' plus '+b+' plus '+c+' ergibt '+(a+b+c)+'.',v)}
+ return make(a+' + '+b+' = ?',a+b,t,'🍓'.repeat(a)+' ➕ '+'🍓'.repeat(b),'Zähle weiter.',a+' plus '+b+' ergibt '+(a+b)+'.',v)}
+ a=rand(115,650);b=rand(20,Math.min(990-a,290));if(v==='minus')return make((a+b)+' − '+b+' = ?',a,t,'🧮','Zerlege den zweiten Wert in Hunderter, Zehner und Einer.',(a+b)+' minus '+b+' ergibt '+a+'.',v);
+ if(v==='missing')return make(a+' + ? = '+(a+b),b,t,'🔢','Rechne die Differenz.',(a+b)+' minus '+a+' ergibt '+b+'.',v);
+ if(v==='nearTen'){a=rand(11,89)*10;b=1000-a;return make(a+' + ? = 1000',b,t,'💯','Finde die Ergänzung zum nächsten Tausender.',a+' plus '+b+' ergibt 1000.',v)}
+ if(v==='three'){a=rand(40,220);b=rand(50,230);c=rand(30,200);return make(a+' + '+b+' + '+c+' = ?',a+b+c,t,'🔢','Addiere in günstiger Reihenfolge.',a+' plus '+b+' plus '+c+' ergibt '+(a+b+c)+'.',v)}
+ return make(a+' + '+b+' = ?',a+b,t,'💎','Rechne Stellenwerte getrennt.',a+' plus '+b+' ergibt '+(a+b)+'.',v)
+}
+if(t==='pattern'){v=rotate(t,['up','down','missing','double','alternating']);let step=pick(small?[1,2,5]:[10,25,50,100]);a=rand(4,Math.max(4,Math.min(small?12:15,Math.floor((small?100:1000)/step)-3)))*step;
+if(v==='down')return make((a+2*step)+', '+(a+step)+', '+a+', ?',a-step,t,'🔢 ⬇️','Schau, um wie viel die Reihe kleiner wird.','Immer '+step+' weniger.',v);
+if(v==='missing')return make(a+', ?, '+(a+2*step)+', '+(a+3*step),a+step,t,'🔢 ❓ 🔢','Betrachte die Abstände.','Es fehlen '+(a+step)+'.',v);
+if(v==='double'){a=rand(1,small?2:8);return make(a+', '+(2*a)+', '+(4*a)+', ?',8*a,t,'🌱 🌳','Die Zahl wird jedes Mal verdoppelt.','Es folgt '+(8*a)+'.',v)}
+if(v==='alternating'){a=rand(1,small?9:90);return make(a+', '+(a+2)+', '+(a+3)+', '+(a+5)+', ?',a+6,t,'🔢','Untersuche die aufeinanderfolgenden Abstände.','Es folgt '+(a+6)+'.',v)}
+return make(a+', '+(a+step)+', '+(a+2*step)+', ?',a+3*step,t,'🔢 ⬆️','Finde den gleichmäßigen Sprung.','Immer '+step+' mehr.',v)}
+if(t==='story'){v=rotate(t,['add','take','compare','missing','groups']);a=rand(3,small?10:35);b=rand(2,small?8:24);if(small&&a+b>20)b=Math.max(1,20-a);
+if(v==='take'){a=rand(7,small?19:70);b=rand(2,a-2);return make('🐻 '+a+' Beeren, '+b+' gegessen. Wie viele bleiben?',a-b,t,'🫐 🧺','Du musst etwas wegnehmen.',a+' minus '+b+' ergibt '+(a-b)+'.',v)}
+if(v==='compare'){a=rand(7,small?19:70);b=rand(2,a-2);return make('🦊 '+a+' Murmeln, 🦉 '+b+'. Wie viele mehr hat der Fuchs?',a-b,t,'🔵 🦊 🦉','Vergleiche die Mengen mit Minus.',a+' minus '+b+' ergibt '+(a-b)+'.',v)}
+if(v==='missing')return make('🍎 Im Korb sind '+(a+b)+' Äpfel. '+a+' sind rot. Wie viele nicht?',b,t,'🍏 🍎 🧺','Ziehe die roten Äpfel von allen ab.',(a+b)+' minus '+a+' ergibt '+b+'.',v);
+if(v==='groups'&&!small){a=rand(2,8);b=rand(2,9);return make('🎈 '+a+' Kinder haben je '+b+' Ballons. Wie viele zusammen?',a*b,t,'🎈 👧 🧒','Gleich große Gruppen kannst du mit Mal berechnen.',a+' mal '+b+' ergibt '+a*b+'.',v)}
+return make('🍎 '+a+' Äpfel und '+b+' kommen dazu. Wie viele?',a+b,t,'🍎 ➕ 🍏','Lege beide Mengen zusammen.',a+' plus '+b+' ergibt '+(a+b)+'.',v)}
+if(t==='shape'){
+// Geometrie: verschiedene Kompetenzen; keine vier sich wiederholenden Ecken-Fragen.
+let items=small?[
+['Wie viele Ecken hat ein Dreieck?',3,'🔺'],['Wie viele Seiten hat ein Quadrat?',4,'🟨'],['Wie viele Ecken hat ein Kreis?',0,'🔴'],['Wie viele Ecken hat ein Rechteck?',4,'▭'],['Wie viele Seiten hat ein Dreieck?',3,'🔺'],['Wie viele Ecken haben zwei Kreise zusammen?',0,'⚪ ⚪'],['Wie viele Ecken haben zwei Dreiecke zusammen?',6,'🔺 🔺'],['Wie viele Ecken haben Quadrat und Dreieck zusammen?',7,'🟦 🔺'],['Wie viele Seiten haben zwei Quadrate zusammen?',8,'🟨 🟨'],['Wie viele Kreise siehst du?',3,'🔴 🟡 🔵'],['Wie viele Dreiecke siehst du?',4,'🔺 🔺 🔺 🔺'],['Wie viele Ecken hat ein Würfel insgesamt?',8,'🎲']]:[
+['Wie viele Ecken hat ein Würfel?',8,'🎲'],['Wie viele Flächen hat ein Würfel?',6,'🎲'],['Wie viele Kanten hat ein Würfel?',12,'🎲'],['Wie viele Ecken hat ein Quader?',8,'📦'],['Wie viele Flächen hat ein Quader?',6,'📦'],['Wie viele Kanten hat ein Quader?',12,'📦'],['Wie viele Symmetrieachsen hat ein Quadrat?',4,'🟨'],['Wie viele Symmetrieachsen hat ein nicht quadratisches Rechteck?',2,'▭'],['Wie viele Symmetrieachsen hat ein gleichseitiges Dreieck?',3,'🔺'],['Wie viele Ecken haben 3 Würfel zusammen?',24,'🎲 🎲 🎲'],['Wie viele Kanten haben 2 Würfel zusammen?',24,'🎲 🎲'],['Wie viele Seiten hat ein regelmäßiges Sechseck?',6,'⬡'],['Wie viele Ecken hat ein regelmäßiges Achteck?',8,'🛑'],['Ein Quadrat hat Seitenlänge 3 cm. Wie lang ist sein Umfang in cm?',12,'🟨 📏'],['Ein Rechteck ist 5 cm lang und 3 cm breit. Wie lang ist sein Umfang in cm?',16,'▭ 📏'],['Ein Quadrat hat Seitenlänge 4 cm. Wie groß ist seine Fläche in cm²?',16,'🟨 📐']];
+let key=k.id+':shape',seen=usedTypes[key]||[];let candidates=items.filter((_,i)=>!seen.includes(i));if(!candidates.length){usedTypes[key]=[];candidates=items}let item=pick(candidates);let idx=items.indexOf(item);(usedTypes[key]||(usedTypes[key]=[])).push(idx);
+return make(item[0],item[1],t,item[2],'Stelle dir die Form genau vor und zähle sorgfältig.','Die Antwort lautet '+item[1]+'.','geo'+idx)
+}
+if(t==='time'){v=rotate(t,['later','earlier','elapsed','half','day']);a=rand(2,small?9:16);b=rand(1,small?2:4);
+if(v==='earlier'){b=rand(1,Math.min(a,small?2:4));return make('🕒 Um '+a+':00 Uhr. '+b+' Stunden früher war es ... Uhr.',a-b,t,'🕒 ⬅️','Zähle die Stunden zurück.',(a-b)+':00 Uhr.',v)}
+if(v==='elapsed')return make('⏳ Von '+a+':00 bis '+(a+b)+':00 Uhr: Wie viele Stunden?',b,t,'⌛','Zähle die vergangenen Stunden.',b+' Stunden.',v);
+if(v==='half'){a=rand(1,small?7:12);return make('🕧 '+a+':30 Uhr. Wie viele Minuten nach '+a+' Uhr?',30,t,'🕧','Erinnere dich, wie viele Minuten eine Stunde hat und halbiere.','30 Minuten.',v)}
+if(v==='day')return make('📅 Wie viele Stunden hat ein Tag?',24,t,'☀️ 🌙','Denke an Tag und Nacht.','24 Stunden.',v);
+return make('🕒 '+a+':00 Uhr, '+b+' Stunden später. Welche Stunde?',a+b,t,'🕒 ➡️','Zähle vorwärts.',(a+b)+':00 Uhr.',v)}
+if(t==='money'){v=rotate(t,small?['plus','minus','change','coins']:['plus','minus','change','coins','cent']);a=rand(2,small?9:45);b=rand(1,small?8:24);
+if(v==='minus'){a=rand(b+1,small?19:75);return make('💰 '+a+' € − '+b+' € = ?',a-b,t,'🪙','Ziehe den Betrag ab.',(a-b)+' €.',v)}
+if(v==='change'){a=rand(2,small?9:20);b=rand(1,a-1);return make('🛒 Du zahlst '+a+' €, der Preis ist '+b+' €. Rückgeld?',a-b,t,'💶 🛒','Rechne Preis vom gezahlten Geld ab.',(a-b)+' € Rückgeld.',v)}
+if(v==='coins'){a=rand(2,small?6:18);return make('🪙 '+a+' Münzen zu je 2 €. Wie viele Euro?',2*a,t,'🪙 🪙','Jede Münze ist 2 Euro wert.',2*a+' €.',v)}
+if(v==='cent'){a=rand(1,small?6:14);return make('🪙 '+a+' € entsprechen wie vielen Cent?',100*a,t,'💶','Ein Euro besteht aus 100 Cent.',100*a+' Cent.',v)}
+return make(a+' € + '+b+' € = ?',a+b,t,'💰 🪙','Addiere die Beträge.',(a+b)+' €.',v)}
+if(t==='times'){v=rotate(t,['product','swap','missing','double','three']);a=rand(2,10);b=rand(2,10);
+if(v==='missing')return make(a+' × ? = '+a*b,b,t,'🎲','Welche Zahl mal '+a+' ergibt das Ergebnis?',a+' mal '+b+' ist '+a*b+'.',v);
+if(v==='double')return make('Das Doppelte von '+a+' × '+b+' ist ...',2*a*b,t,'🎲 🎲','Zuerst das Malergebnis, dann verdoppeln.','Doppelt '+a*b+' ist '+2*a*b+'.',v);
+if(v==='three'){c=rand(1,9);return make(a+' × '+b+' + '+c+' = ?',a*b+c,t,'🎲','Erst mal, dann plus.',a+' mal '+b+' plus '+c+' ergibt '+(a*b+c)+'.',v)}
+return make(a+' × '+b+' = ?',a*b,t,'🎲 🧮','Denk an gleich große Gruppen.',a+' mal '+b+' ist '+a*b+'.',v)}
+if(t==='divide'){v=rotate(t,['split','inverse','missing','double','groups']);b=rand(2,9);c=rand(2,10);a=b*c;
+if(v==='inverse')return make('Welche Zahl geteilt durch '+b+' ergibt '+c+'?',a,t,'🍬','Nutze die Umkehraufgabe mit Mal.',b+' mal '+c+' ist '+a+'.',v);
+if(v==='missing')return make(a+' ÷ ? = '+c,b,t,'🍭','Welche Gruppenzahl passt?',a+' geteilt durch '+b+' ist '+c+'.',v);
+if(v==='double')return make((2*a)+' ÷ '+b+' = ?',2*c,t,'🍬 🍬','Zweimal so viele Dinge, gleich viele Gruppen.',(2*a)+' geteilt durch '+b+' ist '+2*c+'.',v);
+if(v==='groups')return make(a+' Bonbons auf '+b+' Kinder: Wie viele pro Kind?',c,t,'🍬 🧒','Verteile gleichmäßig.',c+' Bonbons je Kind.',v);
+return make(a+' ÷ '+b+' = ?',c,t,'🍬','Verteile gleichmäßig auf '+b+' Gruppen.',a+' geteilt durch '+b+' ist '+c+'.',v)}
+if(t==='wall'){v=rotate(t,['top','left','right','three','reverse']);a=rand(2,small?8:38);b=rand(2,small?9:42);
+if(v==='left')return make('🧱 Oben '+(a+b)+', unten rechts '+b+'. Was steht links?',a,t,'🧱','Rechne oben minus unten rechts.',(a+b)+' minus '+b+' ist '+a+'.',v);
+if(v==='right')return make('🧱 Oben '+(a+b)+', unten links '+a+'. Was steht rechts?',b,t,'🧱','Rechne oben minus unten links.',(a+b)+' minus '+a+' ist '+b+'.',v);
+if(v==='three'){c=rand(1,small?4:15);return make('🧱 Unten '+a+', '+b+', '+c+'. Wie groß ist die Spitze?',a+2*b+c,t,'🧱 🔺','Die mittlere Zahl wird zweimal addiert.',a+' + 2 × '+b+' + '+c+' = '+(a+2*b+c)+'.',v)}
+if(v==='reverse'){c=a+b;return make('🧱 Die zwei mittleren Steine sind '+a+' und '+b+'. Spitze?',c,t,'🧱','Addiere die beiden mittleren Steine.',a+' plus '+b+' ist '+c+'.',v)}
+return make('🧱 Unten '+a+' und '+b+'. Welcher Stein steht darüber?',a+b,t,'🧱 🧱','Addiere die Nachbarsteine.',a+' plus '+b+' ist '+(a+b)+'.',v)}
+if(t==='data'){v=rotate(t,['total','difference','more','less','chance']);a=rand(3,small?10:20);b=rand(1,small?8:16);
+if(v==='chance')return make('🎲 Bei einem normalen Würfel: Wie viele verschiedene Zahlen?',6,t,'🎲','Zähle die möglichen Augenzahlen.','6 verschiedene Zahlen.',v);
+if(v==='difference'){if(a<b)[a,b]=[b,a];return make('📊 '+a+' Stimmen für 🍎, '+b+' für 🍐. Wie groß ist der Unterschied?',a-b,t,'📊 🍎 🍐','Vergleiche die beiden Säulen.',a+' minus '+b+' ist '+(a-b)+'.',v)}
+if(v==='more')return make('📊 '+a+' Stimmen für 🍎. 🍐 hat '+b+' mehr. Wie viele für 🍐?',a+b,t,'📊','Mehr bedeutet plus.',a+' plus '+b+' ist '+(a+b)+'.',v);
+if(v==='less'){a=Math.max(a,b+1);return make('📊 '+a+' Stimmen für 🍎. 🍐 hat '+b+' weniger. Wie viele für 🍐?',a-b,t,'📊','Weniger bedeutet minus.',a+' minus '+b+' ist '+(a-b)+'.',v)}
+return make('📊 '+a+' Stimmen für 🍎 und '+b+' für 🍐. Insgesamt?',a+b,t,'📊 🍎 🍐','Zähle beide Gruppen zusammen.',a+' plus '+b+' ist '+(a+b)+'.',v)}
 return gen(k,'add')
 }
-function makeTask(){let k=person(),t=topic==='mix'?pick(available(k).filter(x=>x[0]!=='mix'))[0]:topic;if(k.grade===1&&['times','divide'].includes(t))t=pick(['friends','add','pattern','story','shape']);let result=gen(k,t);let answers=[result.a],delta=1,attempt=0;while(answers.length<4&&attempt++<300){let d=rand(1,k.grade===1?5:18)*(rand(0,1)?1:-1);let v=result.a+d;if(v>=0&&v!==result.a&&!answers.includes(v))answers.push(v);delta++}for(let i=answers.length-1;i>0;i--){let j=rand(0,i);[answers[i],answers[j]]=[answers[j],answers[i]]}result.choices=answers;return result}
+function makeTask(){let k=person(),t=roundPlan[round];if(k.grade===1&&['times','divide'].includes(t))t='add';let result;
+for(let tries=0;tries<80;tries++){result=gen(k,t);if(result.a===null){ // gemischte Punkt-vor-Strich-Aufgabe
+const m=result.q.match(/(\d+) × (\d+) \+ (\d+) =/);if(m){result.a=Number(m[1])*Number(m[2])+Number(m[3]);result.explain='Erst mal rechnen, dann addieren: '+result.a+'.'}}
+let key=k.id+'|'+t+'|'+result.q;
+if(!usedQuestions.has(key)){usedQuestions.add(key);break}
+}
+let answers=[result.a];let tries=0;while(answers.length<4&&tries++<200){let delta=rand(1,k.grade===1?6:Math.max(18,Math.ceil(result.a*.3)));let x=result.a+(rand(0,1)?delta:-delta);if(x>=0&&!answers.includes(x))answers.push(x)}
+for(let i=answers.length-1;i>0;i--){let j=rand(0,i);[answers[i],answers[j]]=[answers[j],answers[i]]}result.choices=answers;return result}
+function makePlan(){let total=mode==='family'?9:8;usedQuestions=new Set();usedTypes={};let k=kids.find(x=>x.id===who),allowed=available(k).map(x=>x[0]).filter(x=>x!=='mix');roundPlan=[];
+if(topic!=='mix'){for(let i=0;i<total;i++)roundPlan.push(topic);return}
+if(mode==='family'){let pools={};kids.forEach(x=>{pools[x.id]=available(x).map(z=>z[0]).filter(z=>z!=='mix').sort(()=>Math.random()-.5)});for(let i=0;i<total;i++)roundPlan.push(pools[kids[i%3].id][Math.floor(i/3)]);return}
+let pool=allowed.slice().sort(()=>Math.random()-.5);for(let i=0;i<total;i++){if(!pool.length)pool=allowed.slice().sort(()=>Math.random()-.5);roundPlan.push(pool.pop())}}
 function render(){answered=false;wrong=0;task=makeTask();let k=person(),total=mode==='family'?9:8;$('player').textContent=k.emoji+' '+k.name+' ist dran';$('score').textContent='⭐ '+stars+' · '+(round+1)+'/'+total;$('world').textContent=['🌲 🦊 🌈 🏰','⭐ 🦉 🚀 💫','🔥 🐉 🏰 💎'][kids.indexOf(k)];$('worldLabel').textContent=k.world;$('prompt').textContent=task.category==='story'?'Rechengeschichte':catalog.find(t=>t[0]===task.category)[1];$('equation').textContent=task.q;$('art').innerHTML=task.art;$('track').innerHTML='';for(let i=0;i<total;i++){let s=document.createElement('span');s.className=i<round?'done':i===round?'current':'';$('track').appendChild(s)}$('options').innerHTML='';task.choices.forEach(n=>{let b=document.createElement('button');b.className='option';b.textContent=n;b.onclick=()=>answer(n,b);$('options').appendChild(b)});$('feedback').className='feedback hidden';$('next').classList.add('hidden')}
 function answer(n,b){if(answered)return;if(n===task.a){answered=true;stars++;b.classList.add('correct');$('score').textContent='⭐ '+stars+' · '+(round+1)+'/'+(mode==='family'?9:8);$('feedback').className='feedback';$('feedback').textContent='🎉 Klasse! '+task.explain;$('next').classList.remove('hidden');document.querySelectorAll('.option').forEach(x=>x.disabled=true)}else{wrong++;b.classList.add('wrong');b.disabled=true;$('feedback').className='feedback';$('feedback').textContent='💛 Noch nicht ganz. Tipp: '+task.hint}}
-function start(){round=0;stars=0;visible('game');render()}
+function start(){round=0;stars=0;makePlan();visible('game');render()}
 function next(){round++;if(round===(mode==='family'?9:8)){visible('finish');$('finalMessage').textContent=mode==='family'?'Lenia, Mila und Jannes haben gemeinsam den Schatz gefunden!':'Super gemacht, '+kids.find(k=>k.id===who).name+'!';$('finalScore').textContent='⭐ '+stars+' Sterne';if(mode==='solo')try{let key='mathe3_'+who;localStorage.setItem(key,String(Math.max(stars,Number(localStorage.getItem(key)||0))))}catch(e){}return}render()}
 function speak(){if(!window.speechSynthesis){$('feedback').className='feedback';$('feedback').textContent='Vorlesen ist hier leider nicht verfügbar.';return}let u=new SpeechSynthesisUtterance(task.q.replaceAll('×',' mal ').replaceAll('÷',' geteilt durch ').replaceAll('−',' minus ').replaceAll('+',' plus '));u.lang='de-DE';u.rate=.82;window.speechSynthesis.cancel();window.speechSynthesis.speak(u)}
 $('solo').onclick=()=>{mode='solo';$('solo').classList.add('selectedmode');$('family').classList.remove('selectedmode');topics()};$('family').onclick=()=>{mode='family';$('family').classList.add('selectedmode');$('solo').classList.remove('selectedmode');topics()};$('start').onclick=start;$('next').onclick=next;$('speak').onclick=speak;$('home').onclick=()=>{visible('welcome');topics()};$('again').onclick=start;$('choose').onclick=()=>{visible('welcome');topics()};profiles();topics();
